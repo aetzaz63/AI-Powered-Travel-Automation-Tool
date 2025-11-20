@@ -1,4 +1,14 @@
 # AI-Powered-Travel-Automation-Tool
+
+Here is the video of my project. 
+
+https://drive.google.com/file/d/19GZV2nREW2t6HdpsS0uULJ5gk-5qUtOj/view?usp=sharing
+
+
+
+
+
+
 AI-Powered Travel Package Recommendation and Booking Automation
 n8n workflow screenshot
 <img width="1239" height="626" alt="image" src="https://github.com/user-attachments/assets/6ee85c2f-a042-4266-b957-29eae51cc956" />
