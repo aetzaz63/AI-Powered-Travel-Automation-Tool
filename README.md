@@ -1,7 +1,10 @@
 # AI-Powered-Travel-Automation-Tool
 
 Here is the video of my project. 
+Video in Vimeo
+https://vimeo.com/1138852000?share=copy&fl=sv&fe=ci
 
+Video in google Drive
 https://drive.google.com/file/d/186WvoW2wgq2obqf0ZrrUohMMA6aPbfzg/view?usp=sharing
 
 
