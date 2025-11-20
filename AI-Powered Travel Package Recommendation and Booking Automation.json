@@ -1,0 +1,701 @@
+{
+  "name": "AI-Powered Travel Package Recommendation and Booking Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "mode": "webhook",
+        "options": {}
+      },
+      "id": "e659d3d3-5be2-43fd-ab07-c1700d0f63fc",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        1424,
+        2480
+      ],
+      "webhookId": "fa5784cf-4847-4ad0-80d1-064c7c2204f4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "agentEmail",
+              "value": "aetzaz36@gmail.com",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "pricingSheetId",
+              "value": "12xdbolmaFqD2GeZpFMJ8fM0sJPkEQ0xOEPEJT4WgOJE",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "bookingSheetId",
+              "value": "14jH8dDqvzZXiI5r9kcYKcmw3QHdM6VUwyDriY7ZvLug",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "495d115c-cd7e-4974-b239-0c5068a56197",
+      "name": "Workflow Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1648,
+        2480
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are an expert travel assistant for a travel agency specializing in international tour packages.\n\nIMPORTANT: You MUST use the available tools to provide accurate information. Do not make up information.\n\nYour workflow:\n1. When a user asks about destinations, packages, or travel information → ALWAYS use the Travel Knowledge Vector Store tool first to search for relevant information\n2. When discussing pricing or costs → ALWAYS use the Pricing Data Tool to get current prices from Google Sheets\n3. When calculating total trip costs → ALWAYS use the Cost Calculator Tool with the pricing data\n4. When a user wants to book → Collect all required information (name, passport number, phone, email, travel dates, package choice, number of travelers), then use the Booking Storage Tool\n5. After saving a booking → Use the Customer Email Tool to send confirmation to the customer AND use the Agent Notification Tool to alert the travel agent team\n\nRequired booking information:\n- Full name\n- Passport number\n- Phone number\n- Email address\n- Travel dates (departure and return)\n- Selected package/destination\n- Number of travelers\n\nFor cost calculations, you need:\n- Flight cost per person\n- Hotel cost per night\n- Number of nights\n- Airport transfers cost\n- Package price\n- Visa fee\n- Service charge\n- Tax rate (as percentage)\n- Number of travelers\n\nAlways be conversational and helpful. Break down costs clearly. Use tools proactively - don't wait to be asked."
+        }
+      },
+      "id": "6d711de2-1cfa-4f50-ac10-476d41843d8e",
+      "name": "Travel Assistant Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        2408,
+        2272
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "68d84f47-c22e-4a77-8305-930cf8d70797",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1872,
+        2496
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "tq1zQo1zwKyIlJbF",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "id": "6824127d-9e8d-45cf-81ce-2e3d56a210d3",
+      "name": "Conversation Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        2000,
+        2496
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Use this tool to search for travel information including: destination details, tour packages, day-by-day itineraries, visa requirements, hotel information, weather and best seasons, activities and attractions. ALWAYS use this tool when users ask about destinations or travel packages. Input: search query about the destination or topic.",
+        "memoryKey": {
+          "__rl": true,
+          "mode": "list",
+          "value": "vector_store_key"
+        },
+        "topK": 5
+      },
+      "id": "cce53b6c-0945-44bf-9f16-a7fc94ea1299",
+      "name": "Travel Knowledge Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.3,
+      "position": [
+        2128,
+        2496
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "e82e300f-7037-4036-9bd9-57ab95ccdf2c",
+      "name": "OpenAI Embeddings",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2208,
+        2704
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "xJJtwW3jSwZfA3dA",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Use this tool to calculate the total trip cost. Provide a JSON object with: flightCost (number), hotelPerNight (number), nights (number), transfers (number), packagePrice (number), visaFee (number), serviceCharge (number), taxRate (number as percentage), travelers (number). Returns detailed cost breakdown with subtotal, taxes, and total. ALWAYS use this after getting pricing data.",
+        "jsCode": "const input = $input.item.json;\nconst { flightCost = 0, hotelPerNight = 0, nights = 0, transfers = 0, packagePrice = 0, visaFee = 0, serviceCharge = 0, taxRate = 0, travelers = 1 } = input;\n\nconst hotelTotal = hotelPerNight * nights * travelers;\nconst flightTotal = flightCost * travelers;\nconst transfersTotal = transfers * travelers;\nconst packageTotal = packagePrice * travelers;\nconst visaTotal = visaFee * travelers;\nconst serviceTotal = serviceCharge * travelers;\n\nconst subtotal = flightTotal + hotelTotal + transfersTotal + packageTotal + visaTotal + serviceTotal;\nconst taxes = subtotal * (taxRate / 100);\nconst total = subtotal + taxes;\n\nreturn {\n  breakdown: {\n    flights: flightTotal,\n    hotels: hotelTotal,\n    transfers: transfersTotal,\n    package: packageTotal,\n    visa: visaTotal,\n    serviceCharge: serviceTotal,\n    subtotal: subtotal,\n    taxes: taxes,\n    total: total\n  },\n  travelers: travelers,\n  nights: nights\n};"
+      },
+      "id": "e4a9b2ec-559c-4de8-9134-7741b847a2eb",
+      "name": "Cost Calculator Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.3,
+      "position": [
+        2416,
+        2496
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this tool to get current pricing data from Google Sheets. Returns flight costs, hotel rates per night, package prices, visa fees, transfer costs, service charges, and tax rates for different destinations. ALWAYS use this when discussing costs or prices.",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.pricingSheetId }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1918036559,
+          "mode": "list",
+          "cachedResultName": "pricing_sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/12xdbolmaFqD2GeZpFMJ8fM0sJPkEQ0xOEPEJT4WgOJE/edit#gid=1918036559"
+        },
+        "options": {}
+      },
+      "id": "e9fc6ce9-9945-4d13-9d9d-e99f31fa1a78",
+      "name": "Pricing Data Tool",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        2544,
+        2496
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "icXSIGItRnFCGQ9Y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this tool to save a booking to Google Sheets. Provide a JSON object with: customerName, passportNumber, phone, email, travelDates, packageName, travelers, totalCost, status. Use this ONLY after collecting all required booking information from the customer.",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.bookingSheetId }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1292214109,
+          "mode": "list",
+          "cachedResultName": "booking_sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14jH8dDqvzZXiI5r9kcYKcmw3QHdM6VUwyDriY7ZvLug/edit#gid=1292214109"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Customer Name": "={{ $fromAI('customerName', 'Customer full name', 'string') }}",
+            "Passport Number": "={{ $fromAI('passportNumber', 'Customer passport number', 'string') }}",
+            "Phone": "={{ $fromAI('phone', 'Customer phone number', 'string') }}",
+            "Email": "={{ $fromAI('email', 'Customer email address', 'string') }}",
+            "Travel Dates": "={{ $fromAI('travelDates', 'Travel dates', 'string') }}",
+            "Package Name": "={{ $fromAI('packageName', 'Selected package name', 'string') }}",
+            "Travelers": "={{ $fromAI('travelers', 'Number of travelers', 'number') }}",
+            "Total Cost": "={{ $fromAI('totalCost', 'Total cost of the trip', 'number') }}",
+            "Status": "={{ $fromAI('status', 'Booking status', 'string') }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Customer Name",
+              "displayName": "Customer Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Passport Number",
+              "displayName": "Passport Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Travel Dates",
+              "displayName": "Travel Dates",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Package Name",
+              "displayName": "Package Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Travelers",
+              "displayName": "Travelers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total Cost",
+              "displayName": "Total Cost",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "1bb3d93a-8b35-4bb2-9416-7df81a9093d5",
+      "name": "Booking Storage Tool",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        2672,
+        2496
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "icXSIGItRnFCGQ9Y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this tool to send booking confirmation email to the customer. Provide: customerEmail (the customer's email), emailSubject (e.g., \"Your Travel Booking Confirmation\"), emailBody (HTML formatted email with booking details, cost breakdown, itinerary, and payment instructions). Use this AFTER saving the booking.",
+        "sendTo": "={{ $fromAI('customerEmail', 'Customer email address', 'string') }}",
+        "subject": "={{ $fromAI('emailSubject', 'Email subject line', 'string') }}",
+        "message": "={{ $fromAI('emailBody', 'Email body in HTML format', 'string') }}",
+        "options": {}
+      },
+      "id": "4a94fb39-98bf-4eb0-9f17-21a4f113b9e0",
+      "name": "Customer Email Tool",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        2800,
+        2496
+      ],
+      "webhookId": "39418a96-ad08-4ec4-909d-9f57aa562328",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "felwueDnOZBsoYXh",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this tool to notify the travel agent team about a new booking. Provide: notificationSubject (e.g., \"New Booking - [Package Name]\"), notificationBody (HTML formatted with customer name, contact info, package, dates, travelers, total cost, and status). Use this AFTER saving the booking and sending customer confirmation.",
+        "sendTo": "={{ $('Workflow Configuration').first().json.agentEmail }}",
+        "subject": "={{ $fromAI('notificationSubject', 'Notification subject with booking details', 'string') }}",
+        "message": "={{ $fromAI('notificationBody', 'Notification body with complete booking information', 'string') }}",
+        "options": {}
+      },
+      "id": "4523e56e-fe36-47bc-af58-19e99c82f627",
+      "name": "Agent Notification Tool",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        2928,
+        2496
+      ],
+      "webhookId": "ee96fa25-9a08-4894-ac12-5372e42140cf",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "felwueDnOZBsoYXh",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "f396dc25-18f2-4eee-8347-7794f3530a13",
+      "name": "Load Travel Knowledge",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        1424,
+        3120
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "memoryKey": {
+          "__rl": true,
+          "mode": "list",
+          "value": "vector_store_key"
+        }
+      },
+      "id": "504061fa-d200-4a1b-ad9c-906ea6b4fcd3",
+      "name": "Insert into Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.3,
+      "position": [
+        2128,
+        3120
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "973f5bda-bb3a-4c25-8a57-35490853a013",
+      "name": "OpenAI Embeddings for Insert",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2096,
+        3344
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "xJJtwW3jSwZfA3dA",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.text }}",
+        "textSplittingMode": "custom",
+        "options": {}
+      },
+      "id": "b6f7eef0-3a45-4975-9c68-32c7e5c29db1",
+      "name": "Document Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        2224,
+        3344
+      ]
+    },
+    {
+      "parameters": {
+        "chunkOverlap": 200,
+        "options": {}
+      },
+      "id": "a6dd98a5-1415-40c7-995c-c7697c94d5d6",
+      "name": "Text Splitter",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        2304,
+        3552
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1HuPvLe-VJItYLsAWi3hPht3BAEA1HzHv2OrISewEBdg"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "id",
+          "value": "123038084"
+        },
+        "options": {}
+      },
+      "id": "d176aa69-7da5-406c-ad43-875379f83aba",
+      "name": "Read Travel Data from Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1648,
+        3120
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "icXSIGItRnFCGQ9Y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Format each Google Sheets row into a comprehensive text for vector store\nconst item = $input.item.json;\n\n// Extract all fields from the row\nconst destination = item.Destination || '';\nconst overview = item.Overview || '';\nconst itinerary = item['Day-by-Day Itinerary'] || item.Itinerary || '';\nconst visaRequirements = item['Visa Requirements'] || item.Visa || '';\nconst hotels = item.Hotels || item.Accommodation || '';\nconst weather = item.Weather || item['Best Season'] || '';\nconst activities = item.Activities || item.Attractions || '';\n\n// Combine all information into a comprehensive searchable text\nconst text = `\nDESTINATION: ${destination}\n\nOVERVIEW:\n${overview}\n\nDAY-BY-DAY ITINERARY:\n${itinerary}\n\nVISA REQUIREMENTS:\n${visaRequirements}\n\nHOTELS & ACCOMMODATION:\n${hotels}\n\nWEATHER & BEST TIME TO VISIT:\n${weather}\n\nACTIVITIES & ATTRACTIONS:\n${activities}\n`.trim();\n\nreturn {\n  text: text,\n  metadata: {\n    destination: destination,\n    source: 'google_sheets'\n  }\n};"
+      },
+      "id": "5d5e883f-8de9-44df-8571-96a889dbeeb8",
+      "name": "Format Travel Data for Vector Store",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1872,
+        3120
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "Workflow Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Workflow Configuration": {
+      "main": [
+        [
+          {
+            "node": "Travel Assistant Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Travel Assistant Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversation Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Travel Assistant Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Travel Knowledge Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Travel Knowledge Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "Travel Assistant Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cost Calculator Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Travel Assistant Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pricing Data Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Travel Assistant Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Booking Storage Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Travel Assistant Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer Email Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Travel Assistant Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent Notification Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Travel Assistant Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Travel Knowledge": {
+      "main": [
+        [
+          {
+            "node": "Read Travel Data from Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Embeddings for Insert": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Insert into Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Document Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Insert into Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Document Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Travel Data from Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Format Travel Data for Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Travel Data for Vector Store": {
+      "main": [
+        [
+          {
+            "node": "Insert into Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1,
+    "availableInMCP": false
+  },
+  "versionId": "669ed580-4a29-4b39-b36e-6380cb3ffd3a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "08751558fdbfbb714d7c26a92591a124184daba30c1daf335bd8285952a9481e"
+  },
+  "id": "S7LeA4UaxP7z4bTK",
+  "tags": []
+}
